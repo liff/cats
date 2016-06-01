@@ -1,15 +1,71 @@
+## Version 0.6.0
+
+> 2016 May 19
+
+Version 0.6.0 is the sixth release.
+
+Highlights of this release:
+
+* [#990](https://github.com/typelevel/cats/pull/990):  Separate free package into its own module
+* [#1001](https://github.com/typelevel/cats/pull/1001):  Introduce cats-kernel and remove algebra dependency
+
+This release also includes some API changes:
+
+* [#1046](https://github.com/typelevel/cats/pull/1046):  summon `ApplicativeErrorSyntax` for `F[_]` instead of `F[_, _]`
+* [#1034](https://github.com/typelevel/cats/pull/1034):  Don't combine lefts on `Xor` and `XorT` `combine`
+* [#1018](https://github.com/typelevel/cats/pull/1018):  Remove blocking (JVM-only) Future instances
+* [#877](https://github.com/typelevel/cats/pull/877):  Remove required laziness in Prod, fixes #615
+
+
+And additions:
+
+* [#1032](https://github.com/typelevel/cats/pull/1032):  Added `Coproduct` `fold`
+* [#1028](https://github.com/typelevel/cats/pull/1028):  Added `withFilter` for `OptionT`
+* [#1014](https://github.com/typelevel/cats/pull/1014):  Added `Monoid` instance for `WriterT`
+* [#1029](https://github.com/typelevel/cats/pull/1029):  Added an `ApplicativeError` instance for `Kleisli` and a `MonadError[Option, Unit]` to `std.option`
+* [#1023](https://github.com/typelevel/cats/pull/1023):  Add `XorT#fromEither`
+* [#984](https://github.com/typelevel/cats/pull/984):  Add `Validated.ensure`
+* [#1020](https://github.com/typelevel/cats/pull/1020):  Add `Traverse.traverseM`
+
+
+And some code improvements:
+
+* [#1015](https://github.com/typelevel/cats/pull/1015):  Add `Apply.map2Eval` and allow traverse laziness
+* [#1024](https://github.com/typelevel/cats/pull/1024):  Override reverse on reversed `PartialOrder` to return original instance
+* [#880](https://github.com/typelevel/cats/pull/880):  Optimize `Eq[Vector[A]]` instance
+* [#1019](https://github.com/typelevel/cats/pull/1019):  Use `Future#successful` in `pureEval` when possible
+
+And bug fixes:
+
+* [#1011](https://github.com/typelevel/cats/pull/1011):  Add missing type parameters.
+
+And some other improvements to the organization documentation, tutorials, laws and tests, including:
+
+* [#1045](https://github.com/typelevel/cats/pull/1045):  Add a link to the `OptionT` documentation from the monad docs.
+* [#1043](https://github.com/typelevel/cats/pull/1043):  Add notes about kind-projector usage in docs
+* [#1042](https://github.com/typelevel/cats/pull/1042):  Cats 0.5.0 no longer pre-release
+* [#1036](https://github.com/typelevel/cats/pull/1036):  Add FPiS to the "Resources for Learners" section
+* [#1035](https://github.com/typelevel/cats/pull/1035):  Run kernel-law tests for JS as part of build
+* [#991](https://github.com/typelevel/cats/pull/991):  Replace `~>` with `NaturalTransformation`
+* [#1027](https://github.com/typelevel/cats/pull/1027):  Remove unnecessary `nelSemigroup` from `traverse` doc
+* [#1022](https://github.com/typelevel/cats/pull/1022):  Add law-checking for `asMeetPartialOrder` and `asJoinPartialOrder`
+* [#990](https://github.com/typelevel/cats/pull/990):  Separate free package into its own module
+
+
 ## Version 0.5.0
 
-> 2016 April 15
+> 2016 April 28
 
 Version 0.5.0 is the fifth release.
 
 This release includes some API changes:
 
+`cats.laws.discipline.eq` no longer provides `Eq` instances for `Tuple2` and `Tuple3`, these instances and together with some other new instances for `Tuple`s are now provided by `cats.std.tuple` (through inheriting the instance trait defined in algebra 0.4.2).
+
 * [#910](https://github.com/typelevel/cats/pull/910): Remove `Streaming` and `StreamingT`
 * [#967](https://github.com/typelevel/cats/pull/967): `product` and `map` can be implemented in terms of `ap`
 * [#970](https://github.com/typelevel/cats/pull/970): Renamed `Kleisli#apply`to `ap`
-
+* [#994](https://github.com/typelevel/cats/pull/994): updated to latest algebra (brought in all the new goodies)
 
 And additions:
 
@@ -28,6 +84,10 @@ And additions:
 * [#947](https://github.com/typelevel/cats/pull/947): Syntax for `ApplicativeError`
 * [#971](https://github.com/typelevel/cats/pull/971): Add `toValidatedNel` to `Xor`
 * [#973](https://github.com/typelevel/cats/pull/973): Add `flatMapF` for `StateT`
+* [#985](https://github.com/typelevel/cats/pull/985): Add object `reducible` for reducible syntax
+* [#996](https://github.com/typelevel/cats/pull/996): Add `SemigroupK` instance for `Xor`
+* [#998](https://github.com/typelevel/cats/pull/998): Add `SemigroupK` instance for `Validated`
+* [#986](https://github.com/typelevel/cats/pull/986): Add `Bitraverse` instances for `Validated` and `XorT`
 
 
 And bug fixes:
@@ -66,6 +126,9 @@ And some other improvements to the documentation, tutorials, laws and tests, inc
 * [#964](https://github.com/typelevel/cats/pull/964): Clarify stabilty guarantees; drop 'proof of concept' and 'experimental'
 * [#972](https://github.com/typelevel/cats/pull/972): Fix swapped f and g in `invariant` docs
 * [#979](https://github.com/typelevel/cats/pull/979): Fix outdated import for `cats.syntax.apply._`
+* [#995](https://github.com/typelevel/cats/pull/995): Move coverage away from bash
+* [#1002](https://github.com/typelevel/cats/pull/1002): Correct the URL for *Data types à la carte*
+* [#1005](https://github.com/typelevel/cats/pull/1005): fix broken link in foldable docs
 
 
 As always thanks to everyone who filed issues, participated in the Cats Gitter
