@@ -21,6 +21,7 @@ package object syntax {
   object functor extends FunctorSyntax
   object group extends GroupSyntax
   object invariant extends InvariantSyntax
+  object list extends ListSyntax
   object monadCombine extends MonadCombineSyntax
   object monadFilter extends MonadFilterSyntax
   object option extends OptionSyntax
@@ -35,7 +36,8 @@ package object syntax {
   object strong extends StrongSyntax
   object transLift extends TransLiftSyntax
   object traverse extends TraverseSyntax
-  object xor extends XorSyntax
   object validated extends ValidatedSyntax
   object writer extends WriterSyntax
+  object xor extends XorSyntax
+  object xort extends XorTSyntax
 }
