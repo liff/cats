@@ -157,6 +157,9 @@ final case class XorT[F[_], A, B](value: F[A Xor B]) {
   def toValidated(implicit F: Functor[F]): F[Validated[A, B]] =
     F.map(value)(_.toValidated)
 
+  def toValidatedNel(implicit F: Functor[F]): F[ValidatedNel[A, B]] =
+    F.map(value)(_.toValidatedNel)
+
   /** Run this value as a `[[Validated]]` against the function and convert it back to an `[[XorT]]`.
    *
    * The [[Applicative]] instance for `XorT` "fails fast" - it is often useful to "momentarily" have
@@ -166,17 +169,45 @@ final case class XorT[F[_], A, B](value: F[A Xor B]) {
    * {{{
    * scala> import cats.implicits._
    * scala> type Error = String
-   * scala> val v1: Validated[NonEmptyList[Error], Int] = Validated.Invalid(NonEmptyList("error 1"))
-   * scala> val v2: Validated[NonEmptyList[Error], Int] = Validated.Invalid(NonEmptyList("error 2"))
+   * scala> val v1: Validated[NonEmptyList[Error], Int] = Validated.Invalid(NonEmptyList.of("error 1"))
+   * scala> val v2: Validated[NonEmptyList[Error], Int] = Validated.Invalid(NonEmptyList.of("error 2"))
    * scala> val xort: XorT[Option, Error, Int] = XorT(Some(Xor.left("error 3")))
-   * scala> xort.withValidated { v3 => (v1 |@| v2 |@| v3.leftMap(NonEmptyList(_))).map{ case (i, j, k) => i + j + k } }
-   * res0: XorT[Option, NonEmptyList[Error], Int] = XorT(Some(Left(OneAnd(error 1,List(error 2, error 3)))))
+   * scala> xort.withValidated { v3 => (v1 |@| v2 |@| v3.leftMap(NonEmptyList.of(_))).map{ case (i, j, k) => i + j + k } }
+   * res0: XorT[Option, NonEmptyList[Error], Int] = XorT(Some(Left(NonEmptyList(error 1, error 2, error 3))))
    * }}}
    */
   def withValidated[AA, BB](f: Validated[A, B] => Validated[AA, BB])(implicit F: Functor[F]): XorT[F, AA, BB] =
     XorT(F.map(value)(xor => f(xor.toValidated).toXor))
 
   def show(implicit show: Show[F[A Xor B]]): String = show.show(value)
+
+  /**
+   * Transform this `XorT[F, A, B]` into a `[[Nested]][F, A Xor ?, B]`.
+   *
+   * An example where `toNested` can be used, is to get the `Apply.ap` function with the
+   * behavior from the composed `Apply` instances from `F` and `Xor[A, ?]`, which is
+   * inconsistent with the behavior of the `ap` from `Monad` of `XorT`.
+   *
+   * {{{
+   * scala> import cats.data.{Nested, Xor, XorT}
+   * scala> import cats.implicits._
+   * scala> val ff: XorT[List, String, Int => String] =
+   *      |   XorT(List(Xor.right(_.toString), Xor.left("error")))
+   * scala> val fa: XorT[List, String, Int] =
+   *      |   XorT(List(Xor.right(1), Xor.right(2)))
+   * scala> type ErrorOr[A] = String Xor A
+   * scala> type ListErrorOr[A] = Nested[List, ErrorOr, A]
+   * scala> ff.ap(fa)
+   * res0: XorT[List,String,String] = XorT(List(Right(1), Right(2), Left(error)))
+   * scala> XorT((ff.toNested: ListErrorOr[Int => String]).ap(fa.toNested: ListErrorOr[Int]).value)
+   * res1: XorT[List,String,String] = XorT(List(Right(1), Right(2), Left(error), Left(error)))
+   * }}}
+   *
+   * Note that we need the `ErrorOr` type alias above because otherwise we can't use the
+   * syntax function `ap` on `Nested[List, A Xor ?, B]`. This won't be needed after cats has
+   * decided [[https://github.com/typelevel/cats/issues/1073 how to handle the SI-2712 fix]].
+   */
+  def toNested: Nested[F, A Xor ?, B] = Nested[F, A Xor ?, B](value)
 }
 
 object XorT extends XorTInstances with XorTFunctions

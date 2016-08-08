@@ -38,7 +38,7 @@ lazy val buildSettings = Seq(
 
 lazy val catsDoctestSettings = Seq(
   doctestWithDependencies := false
-) ++ doctestSettings
+)
 
 lazy val kernelSettings = Seq(
   // don't warn on value discarding because it's broken on 2.10 with @sp(Unit)
@@ -63,6 +63,7 @@ lazy val commonSettings = Seq(
     compilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
     compilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3")
   ),
+  fork in test := true,
   parallelExecution in Test := false,
   scalacOptions in (Compile, doc) := (scalacOptions in (Compile, doc)).value.filter(_ != "-Xfatal-warnings"),
   // workaround for https://github.com/scalastyle/scalastyle-sbt-plugin/issues/47
@@ -111,7 +112,7 @@ lazy val disciplineDependencies = Seq(
 lazy val testingDependencies = Seq(
   libraryDependencies += "org.typelevel" %%% "catalysts-platform" % "0.0.2",
   libraryDependencies += "org.typelevel" %%% "catalysts-macros" % "0.0.2" % "test",
-  libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.0-M7" % "test")
+  libraryDependencies += "org.scalatest" %%% "scalatest" % "3.0.0-M8" % "test")
 
 
 /**
@@ -137,6 +138,8 @@ lazy val docSettings = Seq(
   site.addMappingsToSiteDir(mappings in (ScalaUnidoc, packageDoc), "api"),
   site.addMappingsToSiteDir(tut, "_tut"),
   ghpagesNoJekyll := false,
+  fork in tut := true,
+  fork in (ScalaUnidoc, unidoc) := true,
   siteMappings += file("CONTRIBUTING.md") -> "contributing.md",
   scalacOptions in (ScalaUnidoc, unidoc) ++= Seq(
     "-Xfatal-warnings",
@@ -172,8 +175,8 @@ lazy val catsJVM = project.in(file(".catsJVM"))
   .settings(moduleName := "cats")
   .settings(catsSettings)
   .settings(commonJvmSettings)
-  .aggregate(macrosJVM, kernelJVM, kernelLawsJVM, coreJVM, lawsJVM, freeJVM, testsJVM, docs, bench)
-  .dependsOn(macrosJVM, kernelJVM, kernelLawsJVM, coreJVM, lawsJVM, freeJVM, testsJVM % "test-internal -> test", bench % "compile-internal;test-internal -> test")
+  .aggregate(macrosJVM, kernelJVM, kernelLawsJVM, coreJVM, lawsJVM, freeJVM, testsJVM, jvm, docs, bench)
+  .dependsOn(macrosJVM, kernelJVM, kernelLawsJVM, coreJVM, lawsJVM, freeJVM, testsJVM % "test-internal -> test", jvm, bench % "compile-internal;test-internal -> test")
 
 lazy val catsJS = project.in(file(".catsJS"))
   .settings(moduleName := "cats")
@@ -205,7 +208,7 @@ lazy val kernel = crossProject.crossType(CrossType.Pure)
   .jsSettings(commonJsSettings:_*)
   .jvmSettings((commonJvmSettings ++ (mimaPreviousArtifacts := Set("org.typelevel" %% "cats-kernel" % "0.6.0"))):_*)
 
-lazy val kernelJVM = kernel.jvm 
+lazy val kernelJVM = kernel.jvm
 lazy val kernelJS = kernel.js
 
 lazy val kernelLaws = crossProject.crossType(CrossType.Pure)
@@ -287,6 +290,13 @@ lazy val js = project
   .settings(commonJsSettings:_*)
   .enablePlugins(ScalaJSPlugin)
 
+// cats-jvm is JVM-only
+lazy val jvm = project
+  .dependsOn(macrosJVM, coreJVM, testsJVM % "test-internal -> test")
+  .settings(moduleName := "cats-jvm")
+  .settings(catsSettings:_*)
+  .settings(commonJvmSettings:_*)
+
 lazy val publishSettings = Seq(
   homepage := Some(url("https://github.com/typelevel/cats")),
   licenses := Seq("MIT" -> url("http://opensource.org/licenses/MIT")),
@@ -355,13 +365,13 @@ lazy val publishSettings = Seq(
 ) ++ credentialSettings ++ sharedPublishSettings ++ sharedReleaseProcess
 
 // These aliases serialise the build for the benefit of Travis-CI.
-addCommandAlias("buildJVM", ";macrosJVM/compile;coreJVM/compile;kernelLawsJVM/compile;lawsJVM/compile;freeJVM/compile;kernelLawsJVM/test;coreJVM/test;testsJVM/test;freeJVM/test;bench/test")
+addCommandAlias("buildJVM", ";macrosJVM/compile;coreJVM/compile;kernelLawsJVM/compile;lawsJVM/compile;freeJVM/compile;kernelLawsJVM/test;coreJVM/test;testsJVM/test;freeJVM/test;jvm/test;bench/test")
 
 addCommandAlias("validateJVM", ";scalastyle;buildJVM;makeSite")
 
 addCommandAlias("validateJS", ";macrosJS/compile;kernelJS/compile;coreJS/compile;kernelLawsJS/compile;lawsJS/compile;kernelLawsJS/test;testsJS/test;js/test")
 
-addCommandAlias("validate", ";validateJS;validateJVM")
+addCommandAlias("validate", ";clean;validateJS;validateJVM")
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Base Build Settings - Should not need to edit below this line.
