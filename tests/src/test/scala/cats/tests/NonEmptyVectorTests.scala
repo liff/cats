@@ -6,7 +6,7 @@ import catalysts.Platform
 import cats.kernel.laws.{GroupLaws, OrderLaws}
 
 import cats.data.NonEmptyVector
-import cats.laws.discipline.{ComonadTests, SemigroupKTests, FoldableTests, SerializableTests, TraverseTests, ReducibleTests, MonadRecTests}
+import cats.laws.discipline.{ComonadTests, SemigroupKTests, FoldableTests, SerializableTests, TraverseTests, ReducibleTests, MonadTests}
 import cats.laws.discipline.arbitrary._
 
 import scala.util.Properties
@@ -50,8 +50,8 @@ class NonEmptyVectorTests extends CatsSuite {
   checkAll("Comonad[NonEmptyVector]", SerializableTests.serializable(Comonad[NonEmptyVector]))
 
 
-  checkAll("NonEmptyVector[Int]", MonadRecTests[NonEmptyVector].monadRec[Int, Int, Int])
-  checkAll("MonadRec[NonEmptyVector]", SerializableTests.serializable(MonadRec[NonEmptyVector]))
+  checkAll("NonEmptyVector[Int]", MonadTests[NonEmptyVector].monad[Int, Int, Int])
+  checkAll("Monad[NonEmptyVector]", SerializableTests.serializable(Monad[NonEmptyVector]))
 
 
   test("size is consistent with toList.size") {
@@ -185,6 +185,28 @@ class NonEmptyVectorTests extends CatsSuite {
     }
   }
 
+  test(":+ is consistent with concat") {
+    forAll { (nonEmptyVector: NonEmptyVector[Int], i: Int) =>
+      nonEmptyVector :+ i should === (nonEmptyVector.concat(Vector(i)))
+    }
+  }
+  test("append is consistent with :+") {
+    forAll { (nonEmptyVector: NonEmptyVector[Int], i: Int) =>
+      nonEmptyVector append i should === (nonEmptyVector :+ i)
+    }
+  }
+
+  test("+: is consistent with concatNev") {
+    forAll { (nonEmptyVector: NonEmptyVector[Int], i: Int) =>
+      i +: nonEmptyVector should === (NonEmptyVector.of(i).concatNev(nonEmptyVector))
+    }
+  }
+  test("prepend is consistent with +:") {
+    forAll { (nonEmptyVector: NonEmptyVector[Int], i: Int) =>
+      nonEmptyVector prepend i should === (i +: nonEmptyVector)
+    }
+  }
+
   test("NonEmptyVector#of on varargs is consistent with NonEmptyVector#apply on Vector") {
     forAll { (head: Int, tail: Vector[Int]) =>
       NonEmptyVector.of(head, tail:_*) should === (NonEmptyVector(head, tail))
@@ -270,6 +292,12 @@ class NonEmptyVectorTests extends CatsSuite {
 
   test("Cannot create a new NonEmptyVector[Int] from apply with a an empty Vector") {
     "val bad: NonEmptyVector[Int] = NonEmptyVector(Vector.empty[Int])" shouldNot compile
+  }
+
+  test("NonEmptyVector#distinct is consistent with Vector#distinct") {
+    forAll { nonEmptyVector: NonEmptyVector[Int] =>
+      nonEmptyVector.distinct.toVector should === (nonEmptyVector.toVector.distinct)
+    }
   }
 }
 

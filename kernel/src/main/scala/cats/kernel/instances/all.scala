@@ -4,12 +4,15 @@ package instances
 package object all extends AllInstances
 
 trait AllInstances
-    extends BigIntInstances
+    extends BigDecimalInstances
+    with BigIntInstances
+    with BitSetInstances
     with BooleanInstances
     with ByteInstances
     with CharInstances
     with DoubleInstances
     with FloatInstances
+    with FunctionInstances
     with IntInstances
     with ListInstances
     with LongInstances

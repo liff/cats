@@ -1,7 +1,7 @@
 package cats
 package tests
 
-import cats.data.{Validated, Writer, WriterT, XorT}
+import cats.data.{EitherT, Validated, Writer, WriterT}
 import cats.functor.{Bifunctor, Contravariant}
 import cats.laws.discipline._
 import cats.laws.discipline.arbitrary._
@@ -65,7 +65,15 @@ class WriterTTests extends CatsSuite {
       WriterT.valueT[Id, Int, Int](i).value should === (i)
     }
   }
-
+ 
+  test("Writer.pure and WriterT.lift are consistent") {
+    forAll { (i: Int) =>
+      val writer: Writer[String, Int] = Writer.value(i)
+      val writerT: WriterT[Option, String, Int] = WriterT.lift(Some(i))
+      writer.run.some should === (writerT.run)
+    }
+  }
+  
   test("show") {
     val writerT: WriterT[Id, List[String], String] = WriterT.put("foo")(List("Some log message"))
     writerT.show should === ("(List(Some log message),foo)")
@@ -158,15 +166,41 @@ class WriterTTests extends CatsSuite {
   }
 
   {
-    // F has a FlatMap and L has a Semigroup
-    implicit val F: FlatMap[ListWrapper] = ListWrapper.monadCombine
+    // F has a Monad and L has a Semigroup
+    implicit val F: Monad[ListWrapper] = ListWrapper.monadCombine
     implicit val L: Semigroup[ListWrapper[Int]] = ListWrapper.semigroup[Int]
 
     Functor[WriterT[ListWrapper, ListWrapper[Int], ?]]
     Apply[WriterT[ListWrapper, ListWrapper[Int], ?]]
     CoflatMap[WriterT[ListWrapper, ListWrapper[Int], ?]]
-    checkAll("WriterT[ListWrapper, ListWrapper[Int], ?]", FlatMapTests[WriterT[ListWrapper, ListWrapper[Int], ?]].flatMap[Int, Int, Int])
-    checkAll("FlatMap[WriterT[ListWrapper, ListWrapper[Int], ?]]", SerializableTests.serializable(FlatMap[WriterT[ListWrapper, ListWrapper[Int], ?]]))
+    checkAll("WriterT[ListWrapper, ListWrapper[Int], ?] 1", FlatMapTests[WriterT[ListWrapper, ListWrapper[Int], ?]].flatMap[Int, Int, Int])
+    checkAll("FlatMap[WriterT[ListWrapper, ListWrapper[Int], ?]] 1", SerializableTests.serializable(FlatMap[WriterT[ListWrapper, ListWrapper[Int], ?]]))
+
+    Functor[WriterT[Id, ListWrapper[Int], ?]]
+    Apply[WriterT[Id, ListWrapper[Int], ?]]
+    FlatMap[WriterT[Id, ListWrapper[Int], ?]]
+    CoflatMap[WriterT[Id, ListWrapper[Int], ?]]
+
+    Functor[Writer[ListWrapper[Int], ?]]
+    Apply[Writer[ListWrapper[Int], ?]]
+    FlatMap[Writer[ListWrapper[Int], ?]]
+    CoflatMap[Writer[ListWrapper[Int], ?]]
+
+    Functor[Logged]
+    Apply[Logged]
+    FlatMap[Logged]
+    CoflatMap[Logged]
+  }
+  {
+    // F has a FlatMap and L has a Monoid
+    implicit val F: FlatMap[ListWrapper] = ListWrapper.monadCombine
+    implicit val L: Monoid[ListWrapper[Int]] = ListWrapper.monoid[Int]
+
+    Functor[WriterT[ListWrapper, ListWrapper[Int], ?]]
+    Apply[WriterT[ListWrapper, ListWrapper[Int], ?]]
+    CoflatMap[WriterT[ListWrapper, ListWrapper[Int], ?]]
+    checkAll("WriterT[ListWrapper, ListWrapper[Int], ?] 2", FlatMapTests[WriterT[ListWrapper, ListWrapper[Int], ?]].flatMap[Int, Int, Int])
+    checkAll("FlatMap[WriterT[ListWrapper, ListWrapper[Int], ?]] 2", SerializableTests.serializable(FlatMap[WriterT[ListWrapper, ListWrapper[Int], ?]]))
 
     Functor[WriterT[Id, ListWrapper[Int], ?]]
     Apply[WriterT[Id, ListWrapper[Int], ?]]
@@ -322,8 +356,8 @@ class WriterTTests extends CatsSuite {
     implicit val iso = CartesianTests.Isomorphisms.invariant[WriterT[Validated[String, ?], ListWrapper[Int], ?]]
     implicit def eq1[A:Eq]: Eq[WriterT[Validated[String, ?], ListWrapper[Int], A]] =
       WriterT.catsDataEqForWriterT[Validated[String, ?], ListWrapper[Int], A]
-    implicit val eq2: Eq[XorT[WriterT[Validated[String, ?], ListWrapper[Int], ?], String, Int]] =
-      XorT.catsDataEqForXorT[WriterT[Validated[String, ?], ListWrapper[Int], ?], String, Int]
+    implicit val eq2: Eq[EitherT[WriterT[Validated[String, ?], ListWrapper[Int], ?], String, Int]] =
+      EitherT.catsDataEqForEitherT[WriterT[Validated[String, ?], ListWrapper[Int], ?], String, Int]
     implicit def arb0[A:Arbitrary]: Arbitrary[WriterT[Validated[String, ?], ListWrapper[Int], A]] =
       arbitrary.catsLawsArbitraryForWriterT[Validated[String, ?], ListWrapper[Int], A]
 
@@ -339,7 +373,7 @@ class WriterTTests extends CatsSuite {
     // F has a MonadError and L has a Monoid
     implicit val L: Monoid[ListWrapper[Int]] = ListWrapper.monoid[Int]
     implicit val iso = CartesianTests.Isomorphisms.invariant[WriterT[Option, ListWrapper[Int], ?]]
-    implicit val eq0: Eq[XorT[WriterT[Option, ListWrapper[Int], ?], Unit, Int]] = XorT.catsDataEqForXorT[WriterT[Option, ListWrapper[Int], ?], Unit, Int]
+    implicit val eq0: Eq[EitherT[WriterT[Option, ListWrapper[Int], ?], Unit, Int]] = EitherT.catsDataEqForEitherT[WriterT[Option, ListWrapper[Int], ?], Unit, Int]
 
 
     Functor[WriterT[Option, ListWrapper[Int], ?]]

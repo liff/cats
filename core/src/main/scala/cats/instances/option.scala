@@ -2,12 +2,11 @@ package cats
 package instances
 
 import scala.annotation.tailrec
-import cats.data.Xor
 
 trait OptionInstances extends cats.kernel.instances.OptionInstances {
 
-  implicit val catsStdInstancesForOption: TraverseFilter[Option] with MonadError[Option, Unit] with MonadCombine[Option] with MonadRec[Option] with CoflatMap[Option] with Alternative[Option] =
-    new TraverseFilter[Option] with MonadError[Option, Unit]  with MonadCombine[Option] with MonadRec[Option] with CoflatMap[Option] with Alternative[Option] {
+  implicit val catsStdInstancesForOption: TraverseFilter[Option] with MonadError[Option, Unit] with MonadCombine[Option] with Monad[Option] with CoflatMap[Option] with Alternative[Option] with RecursiveTailRecM[Option] =
+    new TraverseFilter[Option] with MonadError[Option, Unit]  with MonadCombine[Option] with Monad[Option] with CoflatMap[Option] with Alternative[Option] with RecursiveTailRecM[Option] {
 
       def empty[A]: Option[A] = None
 
@@ -22,11 +21,11 @@ trait OptionInstances extends cats.kernel.instances.OptionInstances {
         fa.flatMap(f)
 
       @tailrec
-      def tailRecM[A, B](a: A)(f: A => Option[A Xor B]): Option[B] =
+      def tailRecM[A, B](a: A)(f: A => Option[Either[A, B]]): Option[B] =
         f(a) match {
           case None => None
-          case Some(Xor.Left(a1)) => tailRecM(a1)(f)
-          case Some(Xor.Right(b)) => Some(b)
+          case Some(Left(a1)) => tailRecM(a1)(f)
+          case Some(Right(b)) => Some(b)
         }
 
       override def map2[A, B, Z](fa: Option[A], fb: Option[B])(f: (A, B) => Z): Option[Z] =

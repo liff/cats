@@ -2,7 +2,7 @@ package cats
 package data
 
 import scala.annotation.tailrec
-import scala.collection.immutable.VectorBuilder
+import scala.collection.immutable.{TreeSet, VectorBuilder}
 import cats.instances.vector._
 
 /**
@@ -55,6 +55,26 @@ final class NonEmptyVector[A] private (val toVector: Vector[A]) extends AnyVal {
    * Append another `NonEmptyVector` to this, producing a new `NonEmptyVector`.
    */
   def concatNev(other: NonEmptyVector[A]): NonEmptyVector[A] = new NonEmptyVector(toVector ++ other.toVector)
+
+  /**
+   * Append an item to this, producing a new `NonEmptyVector`.
+   */
+  def append(a: A): NonEmptyVector[A] = new NonEmptyVector(toVector :+ a)
+
+  /**
+    * Alias for [[append]]
+    */
+  def :+(a: A): NonEmptyVector[A] = append(a)
+
+  /**
+   * Prepend an item to this, producing a new `NonEmptyVector`.
+   */
+  def prepend(a: A): NonEmptyVector[A] = new NonEmptyVector(a +: toVector)
+
+  /**
+    * Alias for [[prepend]]
+    */
+  def +:(a: A): NonEmptyVector[A] = prepend(a)
 
   /**
    * Find the first element matching the predicate, if one exists
@@ -130,14 +150,28 @@ final class NonEmptyVector[A] private (val toVector: Vector[A]) extends AnyVal {
   def length: Int = toVector.length
 
   override def toString: String = s"NonEmpty${toVector.toString}"
+
+  /**
+   * Remove duplicates. Duplicates are checked using `Order[_]` instance.
+   */
+  def distinct(implicit O: Order[A]): NonEmptyVector[A] = {
+    implicit val ord = O.toOrdering
+
+    val buf = Vector.newBuilder[A]
+    tail.foldLeft(TreeSet(head)) { (elementsSoFar, a) =>
+      if (elementsSoFar(a)) elementsSoFar else { buf += a; elementsSoFar + a }
+    }
+
+    NonEmptyVector(head, buf.result())
+  }
 }
 
 private[data] sealed trait NonEmptyVectorInstances {
 
   implicit val catsDataInstancesForNonEmptyVector: SemigroupK[NonEmptyVector] with Reducible[NonEmptyVector]
-      with Comonad[NonEmptyVector] with Traverse[NonEmptyVector] with MonadRec[NonEmptyVector] =
-    new NonEmptyReducible[NonEmptyVector, Vector] with SemigroupK[NonEmptyVector]
-        with Comonad[NonEmptyVector] with Traverse[NonEmptyVector] with MonadRec[NonEmptyVector] {
+    with Comonad[NonEmptyVector] with Traverse[NonEmptyVector] with Monad[NonEmptyVector] with RecursiveTailRecM[NonEmptyVector] =
+    new NonEmptyReducible[NonEmptyVector, Vector] with SemigroupK[NonEmptyVector] with Comonad[NonEmptyVector]
+      with Traverse[NonEmptyVector] with Monad[NonEmptyVector] with RecursiveTailRecM[NonEmptyVector] {
 
       def combineK[A](a: NonEmptyVector[A], b: NonEmptyVector[A]): NonEmptyVector[A] =
         a concatNev b
@@ -182,16 +216,16 @@ private[data] sealed trait NonEmptyVectorInstances {
       override def foldRight[A, B](fa: NonEmptyVector[A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
         fa.foldRight(lb)(f)
 
-      def tailRecM[A, B](a: A)(f: A => NonEmptyVector[A Xor B]): NonEmptyVector[B] = {
+      def tailRecM[A, B](a: A)(f: A => NonEmptyVector[Either[A, B]]): NonEmptyVector[B] = {
         val buf = new VectorBuilder[B]
-        @tailrec def go(v: NonEmptyVector[A Xor B]): Unit = v.head match {
-            case Xor.Right(b) =>
+        @tailrec def go(v: NonEmptyVector[Either[A, B]]): Unit = v.head match {
+            case Right(b) =>
             buf += b
             NonEmptyVector.fromVector(v.tail) match {
               case Some(t) => go(t)
               case None => ()
             }
-          case Xor.Left(a) => go(f(a).concat(v.tail))
+          case Left(a) => go(f(a).concat(v.tail))
           }
         go(f(a))
         NonEmptyVector.fromVectorUnsafe(buf.result())

@@ -1,18 +1,21 @@
 package cats
 package instances
 
+import scala.annotation.tailrec
+
 trait MapInstances extends cats.kernel.instances.MapInstances {
 
   implicit def catsStdShowForMap[A, B](implicit showA: Show[A], showB: Show[B]): Show[Map[A, B]] =
-    Show.show[Map[A, B]] { m =>
-      val body = m.map { case (a, b) =>
-        s"${showA.show(a)} -> ${showB.show(b)})"
-      }.mkString(",")
-      s"Map($body)"
+    new Show[Map[A, B]] {
+      def show(m: Map[A, B]): String =
+        m.iterator
+          .map { case (a, b) => showA.show(a) + " -> " + showB.show(b) }
+          .mkString("Map(", ", ", ")")
     }
 
-  implicit def catsStdInstancesForMap[K]: TraverseFilter[Map[K, ?]] with FlatMap[Map[K, ?]] =
-    new TraverseFilter[Map[K, ?]] with FlatMap[Map[K, ?]] {
+  // scalastyle:off method.length
+  implicit def catsStdInstancesForMap[K]: TraverseFilter[Map[K, ?]] with FlatMap[Map[K, ?]] with RecursiveTailRecM[Map[K, ?]] =
+    new TraverseFilter[Map[K, ?]] with FlatMap[Map[K, ?]] with RecursiveTailRecM[Map[K, ?]] {
 
       override def traverse[G[_], A, B](fa: Map[K, A])(f: A => G[B])(implicit G: Applicative[G]): G[Map[K, B]] = {
         val gba: Eval[G[Map[K, B]]] = Always(G.pure(Map.empty))
@@ -53,8 +56,28 @@ trait MapInstances extends cats.kernel.instances.MapInstances {
       def foldRight[A, B](fa: Map[K, A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
         Foldable.iterateRight(fa.values.iterator, lb)(f)
 
+      def tailRecM[A, B](a: A)(f: A => Map[K, Either[A, B]]): Map[K, B] = {
+        val bldr = Map.newBuilder[K, B]
+
+        @tailrec def descend(k: K, either: Either[A, B]): Unit =
+          either match {
+            case Left(a) =>
+              f(a).get(k) match {
+                case Some(x) => descend(k, x)
+                case None => ()
+              }
+            case Right(b) =>
+              bldr += ((k, b))
+              ()
+          }
+
+        f(a).foreach { case (k, a) => descend(k, a) }
+        bldr.result
+      }
+
       override def size[A](fa: Map[K, A]): Long = fa.size.toLong
 
       override def isEmpty[A](fa: Map[K, A]): Boolean = fa.isEmpty
     }
+  // scalastyle:on method.length
 }

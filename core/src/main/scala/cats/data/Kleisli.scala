@@ -99,9 +99,9 @@ private[data] sealed abstract class KleisliInstances extends KleisliInstances0 {
 
   implicit def catsDataChoiceForKleisli[F[_]](implicit ev: Monad[F]): Choice[Kleisli[F, ?, ?]] =
     new Choice[Kleisli[F, ?, ?]] {
-      def id[A]: Kleisli[F, A, A] = Kleisli(ev.pure(_))
+      def id[A]: Kleisli[F, A, A] = Kleisli(ev.pure)
 
-      def choice[A, B, C](f: Kleisli[F, A, C], g: Kleisli[F, B, C]): Kleisli[F, Xor[A, B], C] =
+      def choice[A, B, C](f: Kleisli[F, A, C], g: Kleisli[F, B, C]): Kleisli[F, Either[A, B], C] =
         Kleisli(_.fold(f.run, g.run))
 
       def compose[A, B, C](f: Kleisli[F, B, C], g: Kleisli[F, A, B]): Kleisli[F, A, C] =
@@ -144,7 +144,13 @@ private[data] sealed abstract class KleisliInstances0 extends KleisliInstances1 
 
     def map[B, C](fa: Kleisli[F, A, B])(f: B => C): Kleisli[F, A, C] =
       fa.map(f)
+
+    def tailRecM[B, C](b: B)(f: B => Kleisli[F, A, Either[B, C]]): Kleisli[F, A, C] =
+      Kleisli[F, A, C]({ a => FlatMap[F].tailRecM(b) { f(_).run(a) } })
   }
+
+  implicit def catsDataRecursiveTailRecMForKleisli[F[_]: RecursiveTailRecM, A]: RecursiveTailRecM[Kleisli[F, A, ?]] =
+    RecursiveTailRecM.create[Kleisli[F, A, ?]]
 
   implicit def catsDataSemigroupForKleisli[F[_], A, B](implicit M: Semigroup[F[B]]): Semigroup[Kleisli[F, A, B]] =
     new KleisliSemigroup[F, A, B] { def FB: Semigroup[F[B]] = M }
@@ -194,6 +200,9 @@ private[data] sealed abstract class KleisliInstances4 {
 
       def local[B](f: A => A)(fa: Kleisli[F, A, B]): Kleisli[F, A, B] =
         Kleisli(f.andThen(fa.run))
+
+      def tailRecM[B, C](b: B)(f: B => Kleisli[F, A, Either[B, C]]): Kleisli[F, A, C] =
+        Kleisli[F, A, C]({ a => FlatMap[F].tailRecM(b) { f(_).run(a) } })
     }
 }
 

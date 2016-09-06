@@ -51,6 +51,7 @@ lazy val kernelSettings = Seq(
 ) ++ warnUnusedImport
 
 lazy val commonSettings = Seq(
+  incOptions := incOptions.value.withLogRecompileOnMacro(false),
   scalacOptions ++= commonScalacOptions,
   resolvers ++= Seq(
     "bintray/non" at "http://dl.bintray.com/non/maven",
@@ -58,7 +59,7 @@ lazy val commonSettings = Seq(
     Resolver.sonatypeRepo("snapshots")
   ),
   libraryDependencies ++= Seq(
-    "com.github.mpilquist" %%% "simulacrum" % "0.7.0",
+    "com.github.mpilquist" %%% "simulacrum" % "0.8.0",
     "org.typelevel" %%% "machinist" % "0.4.1",
     compilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
     compilerPlugin("org.spire-math" %% "kind-projector" % "0.6.3")
@@ -90,9 +91,10 @@ lazy val commonJsSettings = Seq(
   requiresDOM := false,
   jsEnv := NodeJSEnv().value,
   // Only used for scala.js for now
-  botBuild := sys.props.getOrElse("CATS_BOT_BUILD", default="false") == "true",
+  botBuild := scala.sys.env.get("TRAVIS").isDefined,
   // batch mode decreases the amount of memory needed to compile scala.js code
-  scalaJSOptimizerOptions := scalaJSOptimizerOptions.value.withBatchMode(botBuild.value)
+  scalaJSOptimizerOptions := scalaJSOptimizerOptions.value.withBatchMode(botBuild.value),
+  doctestGenTests := Seq.empty
 )
 
 lazy val commonJvmSettings = Seq(
@@ -100,6 +102,15 @@ lazy val commonJvmSettings = Seq(
 // currently sbt-doctest doesn't work in JS builds, so this has to go in the
 // JVM settings. https://github.com/tkawachi/sbt-doctest/issues/52
 ) ++ catsDoctestSettings
+
+lazy val includeGeneratedSrc: Setting[_] = {
+  mappings in (Compile, packageSrc) ++= {
+    val base = (sourceManaged in Compile).value
+    (managedSources in Compile).value.map { file =>
+      file -> file.relativeTo(base).get.getPath
+    }
+  }
+}
 
 lazy val catsSettings = buildSettings ++ commonSettings ++ publishSettings ++ scoverageSettings ++ javadocSettings
 
@@ -187,6 +198,7 @@ lazy val catsJS = project.in(file(".catsJS"))
   .enablePlugins(ScalaJSPlugin)
 
 
+
 lazy val macros = crossProject.crossType(CrossType.Pure)
   .settings(moduleName := "cats-macros")
   .settings(catsSettings:_*)
@@ -205,8 +217,9 @@ lazy val kernel = crossProject.crossType(CrossType.Pure)
   .settings(publishSettings: _*)
   .settings(scoverageSettings: _*)
   .settings(sourceGenerators in Compile <+= (sourceManaged in Compile).map(KernelBoiler.gen))
+  .settings(includeGeneratedSrc)
   .jsSettings(commonJsSettings:_*)
-  .jvmSettings((commonJvmSettings ++ (mimaPreviousArtifacts := Set("org.typelevel" %% "cats-kernel" % "0.6.0"))):_*)
+  .jvmSettings((commonJvmSettings ++ (mimaPreviousArtifacts := Set("org.typelevel" %% "cats-kernel" % "0.7.0"))):_*)
 
 lazy val kernelJVM = kernel.jvm
 lazy val kernelJS = kernel.js
@@ -232,6 +245,7 @@ lazy val core = crossProject.crossType(CrossType.Pure)
   .settings(moduleName := "cats-core")
   .settings(catsSettings:_*)
   .settings(sourceGenerators in Compile <+= (sourceManaged in Compile).map(Boilerplate.gen))
+  .settings(includeGeneratedSrc)
   .settings(libraryDependencies += "org.scalacheck" %%% "scalacheck" % scalacheckVersion % "test")
   .jsSettings(commonJsSettings:_*)
   .jvmSettings(commonJvmSettings:_*)
@@ -280,6 +294,8 @@ lazy val bench = project.dependsOn(macrosJVM, coreJVM, freeJVM, lawsJVM)
   .settings(catsSettings)
   .settings(noPublishSettings)
   .settings(commonJvmSettings)
+  .settings(libraryDependencies ++= Seq(
+    "org.scalaz" %% "scalaz-core" % "7.2.5"))
   .enablePlugins(JmhPlugin)
 
 // cats-js is JS-only
@@ -289,6 +305,7 @@ lazy val js = project
   .settings(catsSettings:_*)
   .settings(commonJsSettings:_*)
   .enablePlugins(ScalaJSPlugin)
+
 
 // cats-jvm is JVM-only
 lazy val jvm = project
@@ -316,6 +333,11 @@ lazy val publishSettings = Seq(
         <url>https://github.com/rossabaker/</url>
       </developer>
       <developer>
+        <id>johnynek</id>
+        <name>P. Oscar Boykin</name>
+        <url>https://github.com/johnynek/</url>
+      </developer>
+      <developer>
         <id>travisbrown</id>
         <name>Travis Brown</name>
         <url>https://github.com/travisbrown/</url>
@@ -324,6 +346,11 @@ lazy val publishSettings = Seq(
         <id>adelbertc</id>
         <name>Adelbert Chang</name>
         <url>https://github.com/adelbertc/</url>
+      </developer>
+      <developer>
+        <id>peterneyens</id>
+        <name>Peter Neyens</name>
+        <url>https://github.com/peterneyens/</url>
       </developer>
       <developer>
         <id>tpolecat</id>
@@ -360,18 +387,27 @@ lazy val publishSettings = Seq(
         <name>Julien Truffaut</name>
         <url>https://github.com/julien-truffaut/</url>
       </developer>
+      <developer>
+        <id>kailuowang</id>
+        <name>Kailuo Wang</name>
+        <url>https://github.com/kailuowang/</url>
+      </developer>
     </developers>
   )
 ) ++ credentialSettings ++ sharedPublishSettings ++ sharedReleaseProcess
 
 // These aliases serialise the build for the benefit of Travis-CI.
-addCommandAlias("buildJVM", ";macrosJVM/compile;coreJVM/compile;kernelLawsJVM/compile;lawsJVM/compile;freeJVM/compile;kernelLawsJVM/test;coreJVM/test;testsJVM/test;freeJVM/test;jvm/test;bench/test")
+addCommandAlias("buildJVM", "catsJVM/test")
 
 addCommandAlias("validateJVM", ";scalastyle;buildJVM;makeSite")
 
-addCommandAlias("validateJS", ";macrosJS/compile;kernelJS/compile;coreJS/compile;kernelLawsJS/compile;lawsJS/compile;kernelLawsJS/test;testsJS/test;js/test")
+addCommandAlias("validateJS", ";catsJS/compile;testsJS/test;js/test")
 
-addCommandAlias("validate", ";clean;validateJS;validateJVM")
+addCommandAlias("validateKernelJS", "kernelLawsJS/test")
+
+addCommandAlias("validateFreeJS", "freeJS/test") //separated due to memory constraint on travis
+
+addCommandAlias("validate", ";clean;validateJS;validateKernelJS;validateFreeJS;validateJVM")
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Base Build Settings - Should not need to edit below this line.
@@ -451,8 +487,8 @@ lazy val sharedReleaseProcess = Seq(
   releaseProcess := Seq[ReleaseStep](
     checkSnapshotDependencies,
     inquireVersions,
-    //runClean, // disabled to reduce memory usage during release
-    runTest,
+    runClean,
+    releaseStepCommand("validate"),
     setReleaseVersion,
     commitReleaseVersion,
     tagRelease,

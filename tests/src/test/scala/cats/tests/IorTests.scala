@@ -1,8 +1,9 @@
 package cats
 package tests
 
-import cats.data.{Xor, Ior}
-import cats.laws.discipline.{BifunctorTests, TraverseTests, MonadTests, SerializableTests, CartesianTests}
+import cats.data.Ior
+import cats.kernel.laws.GroupLaws
+import cats.laws.discipline.{BifunctorTests, CartesianTests, MonadTests, SerializableTests, TraverseTests}
 import cats.laws.discipline.arbitrary._
 import org.scalacheck.Arbitrary._
 
@@ -20,6 +21,9 @@ class IorTests extends CatsSuite {
   checkAll("Traverse[String Ior ?]", SerializableTests.serializable(Traverse[String Ior ?]))
   checkAll("? Ior ?", BifunctorTests[Ior].bifunctor[Int, Int, Int, String, String, String])
 
+  checkAll("Semigroup[Ior[A: Semigroup, B: Semigroup]]", GroupLaws[Ior[List[Int], List[Int]]].semigroup)
+  checkAll("SerializableTest Semigroup[Ior[A: Semigroup, B: Semigroup]]", SerializableTests.serializable(Semigroup[Ior[List[Int], List[Int]]]))
+
   test("left Option is defined left and both") {
     forAll { (i: Int Ior String) =>
       (i.isLeft || i.isBoth) should === (i.left.isDefined)
@@ -34,7 +38,7 @@ class IorTests extends CatsSuite {
 
   test("onlyLeftOrRight") {
     forAll { (i: Int Ior String) =>
-      i.onlyLeft.map(Xor.left).orElse(i.onlyRight.map(Xor.right)) should === (i.onlyLeftOrRight)
+      i.onlyLeft.map(Left(_)).orElse(i.onlyRight.map(Right(_))) should === (i.onlyLeftOrRight)
     }
   }
 
@@ -147,15 +151,9 @@ class IorTests extends CatsSuite {
     }
   }
 
-  test("toXor consistent with right") {
+  test("toEither consistent with right") {
     forAll { (x: Int Ior String) =>
-      x.toXor.toOption should === (x.right)
-    }
-  }
-
-  test("toXor consistent with toEither") {
-    forAll { (x: Int Ior String) =>
-      x.toEither should === (x.toXor.toEither)
+      x.toEither.toOption should === (x.right)
     }
   }
 
