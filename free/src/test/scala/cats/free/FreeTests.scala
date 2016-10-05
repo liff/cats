@@ -6,7 +6,7 @@ import cats.arrow.FunctionK
 import cats.laws.discipline.{CartesianTests, MonadTests, SerializableTests}
 import cats.laws.discipline.arbitrary.catsLawsArbitraryForFn0
 
-import org.scalacheck.{Arbitrary, Gen}
+import org.scalacheck.{Arbitrary, Gen, Cogen}
 import Arbitrary.arbFunction1
 
 class FreeTests extends CatsSuite {
@@ -69,10 +69,8 @@ class FreeTests extends CatsSuite {
       z <- if (j<10000) a(j) else Free.pure[FTestApi, Int](j)
     } yield z
 
-    def runner: FunctionK[FTestApi,Id] = new FunctionK[FTestApi,Id] {
-      def apply[A](fa: FTestApi[A]): Id[A] = fa match {
-        case TB(i) => i+1
-      }
+    def runner: FunctionK[FTestApi,Id] = λ[FunctionK[FTestApi,Id]] {
+      case TB(i) => i+1
     }
 
     assert(10000 == a(0).foldMap(runner))
@@ -117,9 +115,7 @@ object FreeTests extends FreeTestsInstances {
 }
 
 sealed trait FreeTestsInstances {
-  val headOptionU: FunctionK[List,Option] = new FunctionK[List,Option] {
-    def apply[A](fa: List[A]): Option[A] = fa.headOption
-  }
+  val headOptionU = λ[FunctionK[List,Option]](_.headOption)
 
   private def freeGen[F[_], A](maxDepth: Int)(implicit F: Arbitrary[F[A]], A: Arbitrary[A]): Gen[Free[F, A]] = {
     val noFlatMapped = Gen.oneOf(
@@ -131,7 +127,7 @@ sealed trait FreeTestsInstances {
     def withFlatMapped = for {
       fDepth <- nextDepth
       freeDepth <- nextDepth
-      f <- arbFunction1[A, Free[F, A]](Arbitrary(freeGen[F, A](fDepth))).arbitrary
+      f <- arbFunction1[A, Free[F, A]](Arbitrary(freeGen[F, A](fDepth)), Cogen[Unit].contramap(_ => ())).arbitrary
       freeFA <- freeGen[F, A](freeDepth)
     } yield freeFA.flatMap(f)
 
@@ -142,7 +138,7 @@ sealed trait FreeTestsInstances {
   implicit def freeArbitrary[F[_], A](implicit F: Arbitrary[F[A]], A: Arbitrary[A]): Arbitrary[Free[F, A]] =
     Arbitrary(freeGen[F, A](4))
 
-  implicit def freeEq[S[_]: Monad: RecursiveTailRecM, A](implicit SA: Eq[S[A]]): Eq[Free[S, A]] =
+  implicit def freeEq[S[_]: Monad, A](implicit SA: Eq[S[A]]): Eq[Free[S, A]] =
     new Eq[Free[S, A]] {
       def eqv(a: Free[S, A], b: Free[S, A]): Boolean =
         SA.eqv(a.runM(identity),  b.runM(identity))

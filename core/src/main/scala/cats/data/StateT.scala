@@ -150,6 +150,15 @@ object StateT extends StateTInstances {
 
   def modifyF[F[_], S](f: S => F[S])(implicit F: Applicative[F]): StateT[F, S, Unit] =
     StateT(s => F.map(f(s))(s => (s, ())))
+
+  def get[F[_], S](implicit F: Applicative[F]): StateT[F, S, S] =
+    StateT(s => F.pure((s, s)))
+
+  def set[F[_], S](s: S)(implicit F: Applicative[F]): StateT[F, S, Unit] =
+    StateT(_ => F.pure((s, ())))
+
+  def setF[F[_], S](fs: F[S])(implicit F: Applicative[F]): StateT[F, S, Unit] =
+    StateT(_ => F.map(fs)(s => (s, ())))
 }
 
 private[data] sealed trait StateTInstances extends StateTInstances1 {
@@ -168,8 +177,6 @@ private[data] sealed trait StateTInstances1 extends StateTInstances2 {
 private[data] sealed trait StateTInstances2 {
   implicit def catsDataMonadForStateT[F[_], S](implicit F0: Monad[F]): Monad[StateT[F, S, ?]] =
     new StateTMonad[F, S] { implicit def F = F0 }
-
-  implicit def catsDataRecursiveTailRecMForStateT[F[_]: RecursiveTailRecM, S]: RecursiveTailRecM[StateT[F, S, ?]] = RecursiveTailRecM.create[StateT[F, S, ?]]
 
   implicit def catsDataSemigroupKForStateT[F[_], S](implicit F0: Monad[F], G0: SemigroupK[F]): SemigroupK[StateT[F, S, ?]] =
     new StateTSemigroupK[F, S] { implicit def F = F0; implicit def G = G0 }
