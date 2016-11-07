@@ -26,6 +26,8 @@ class FreeTests extends CatsSuite {
   test("compile id"){
     forAll { x: Free[List, Int] =>
       x.compile(FunctionK.id[List]) should === (x)
+      val fk = Free.compile(FunctionK.id[List])
+      fk(x) === x
     }
   }
 
@@ -46,6 +48,9 @@ class FreeTests extends CatsSuite {
       val mapped = x.compile(headOptionU)
       val folded = mapped.foldMap(FunctionK.id[Option])
       folded should === (x.foldMap(headOptionU))
+
+      val fk = Free.foldMap(headOptionU)
+      folded should === (fk(x))
     }
   }
 
@@ -122,7 +127,7 @@ sealed trait FreeTestsInstances {
       A.arbitrary.map(Free.pure[F, A]),
       F.arbitrary.map(Free.liftF[F, A]))
 
-    val nextDepth = Gen.chooseNum(1, maxDepth - 1)
+    val nextDepth = Gen.chooseNum(1, math.max(1, maxDepth - 1))
 
     def withFlatMapped = for {
       fDepth <- nextDepth

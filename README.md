@@ -24,13 +24,13 @@ standard library. Cats augments the standard library with tools that further ena
 
 ### Getting Started
 
-Cats is currently available for Scala 2.10 and 2.11, and [Scala.js](http://www.scala-js.org/).
+Cats is currently available for Scala 2.10, 2.11 and 2.12, and [Scala.js](http://www.scala-js.org/).
 
 To get started with SBT, simply add the following to your `build.sbt`
 file:
 
 ```scala
-libraryDependencies += "org.typelevel" %% "cats" % "0.7.2"
+libraryDependencies += "org.typelevel" %% "cats" % "0.8.0"
 ```
 
 This will pull in all of Cats' modules. If you only require some
@@ -125,6 +125,7 @@ There are many projects that integrate with Cats:
  * [Circe](https://github.com/travisbrown/circe): pure functional JSON library.
  * [Dogs](https://github.com/stew/dogs): pure functional collections and data structures.
  * [Fetch](https://github.com/47deg/fetch): efficient data access to heterogeneous data sources.
+ * [Frameless](https://github.com/adelbertc/frameless): Expressive types for Spark.
  * [FS2](https://github.com/functional-streams-for-scala): compositional, streaming I/O library
  * [Kittens](https://github.com/milessabin/kittens): automatically derived type class instances.
  * [Monix](https://github.com/monixio/monix): high-performance library for composing asynchronous and event-based programs.
