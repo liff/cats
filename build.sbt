@@ -11,11 +11,7 @@ lazy val scoverageSettings = Seq(
   coverageFailOnMinimum := false
 )
 
-lazy val buildSettings = Seq(
-  organization := "org.typelevel",
-  scalaVersion := "2.11.8",
-  crossScalaVersions := Seq("2.10.6", "2.11.8", "2.12.0-RC2")
-)
+organization in ThisBuild := "org.typelevel"
 
 lazy val catsDoctestSettings = Seq(
   doctestWithDependencies := false
@@ -41,9 +37,9 @@ lazy val commonSettings = Seq(
   ),
   libraryDependencies ++= Seq(
     "com.github.mpilquist" %%% "simulacrum" % "0.10.0",
-    "org.typelevel" %%% "machinist" % "0.6.0",
-    compilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
-    compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.2")
+    "org.typelevel" %%% "machinist" % "0.6.1",
+    compilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.patch),
+    compilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
   ),
   fork in test := true,
   parallelExecution in Test := false,
@@ -92,19 +88,19 @@ lazy val includeGeneratedSrc: Setting[_] = {
   }
 }
 
-lazy val catsSettings = buildSettings ++ commonSettings ++ publishSettings ++ scoverageSettings ++ javadocSettings
+lazy val catsSettings = commonSettings ++ publishSettings ++ scoverageSettings ++ javadocSettings
 
-lazy val scalaCheckVersion = "1.13.3"
-lazy val scalaTestVersion = "3.0.0"
-lazy val disciplineVersion = "0.7.1"
+lazy val scalaCheckVersion = "1.13.4"
+lazy val scalaTestVersion = "3.0.1"
+lazy val disciplineVersion = "0.7.3"
 
 lazy val disciplineDependencies = Seq(
   libraryDependencies += "org.scalacheck" %%% "scalacheck" % scalaCheckVersion,
   libraryDependencies += "org.typelevel" %%% "discipline" % disciplineVersion)
 
 lazy val testingDependencies = Seq(
-  libraryDependencies += "org.typelevel" %%% "catalysts-platform" % "0.0.4",
-  libraryDependencies += "org.typelevel" %%% "catalysts-macros" % "0.0.4" % "test",
+  libraryDependencies += "org.typelevel" %%% "catalysts-platform" % "0.0.5",
+  libraryDependencies += "org.typelevel" %%% "catalysts-macros" % "0.0.5" % "test",
   libraryDependencies += "org.scalatest" %%% "scalatest" % scalaTestVersion % "test")
 
 
@@ -211,17 +207,24 @@ lazy val macros = crossProject.crossType(CrossType.Pure)
 lazy val macrosJVM = macros.jvm
 lazy val macrosJS = macros.js
 
+val binaryCompatibleVersion = "0.8.0"
+
 lazy val kernel = crossProject.crossType(CrossType.Pure)
   .in(file("kernel"))
   .settings(moduleName := "cats-kernel", name := "Cats kernel")
   .settings(kernelSettings: _*)
-  .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(scoverageSettings: _*)
   .settings(sourceGenerators in Compile += (sourceManaged in Compile).map(KernelBoiler.gen).taskValue)
   .settings(includeGeneratedSrc)
   .jsSettings(commonJsSettings:_*)
-  .jvmSettings((commonJvmSettings ++ (mimaPreviousArtifacts := Set("org.typelevel" %% "cats-kernel" % "0.7.0"))):_*)
+  .jvmSettings((commonJvmSettings ++
+    (mimaPreviousArtifacts := {
+      if (scalaVersion.value startsWith "2.12")
+        Set()
+      else
+        Set("org.typelevel" %% "cats-kernel" % binaryCompatibleVersion)
+    })):_*)
 
 lazy val kernelJVM = kernel.jvm
 lazy val kernelJS = kernel.js
@@ -230,7 +233,6 @@ lazy val kernelLaws = crossProject.crossType(CrossType.Pure)
   .in(file("kernel-laws"))
   .settings(moduleName := "cats-kernel-laws", name := "Cats kernel laws")
   .settings(kernelSettings: _*)
-  .settings(buildSettings: _*)
   .settings(publishSettings: _*)
   .settings(scoverageSettings: _*)
   .settings(disciplineDependencies: _*)
@@ -304,7 +306,7 @@ lazy val bench = project.dependsOn(macrosJVM, coreJVM, freeJVM, lawsJVM)
   .settings(commonJvmSettings)
   .settings(coverageEnabled := false)
   .settings(libraryDependencies ++= Seq(
-    "org.scalaz" %% "scalaz-core" % "7.2.6"))
+    "org.scalaz" %% "scalaz-core" % "7.2.7"))
   .enablePlugins(JmhPlugin)
 
 // cats-js is JS-only
@@ -409,7 +411,7 @@ lazy val publishSettings = Seq(
 // These aliases serialise the build for the benefit of Travis-CI.
 addCommandAlias("buildJVM", "catsJVM/test")
 
-addCommandAlias("validateJVM", ";scalastyle;buildJVM;makeMicrosite")
+addCommandAlias("validateJVM", ";scalastyle;buildJVM;mimaReportBinaryIssues;makeMicrosite")
 
 addCommandAlias("validateJS", ";catsJS/compile;testsJS/test;js/test")
 
@@ -443,7 +445,7 @@ lazy val crossVersionSharedSources: Seq[Setting[_]] =
   }
 
 lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
-  libraryDependencies += "org.scala-lang" %%% "scala-reflect" % scalaVersion.value % "provided",
+  libraryDependencies += scalaOrganization.value %%% "scala-reflect" % scalaVersion.value % "provided",
   libraryDependencies ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       // if scala 2.11+ is used, quasiquotes are merged into scala-reflect
@@ -451,7 +453,7 @@ lazy val scalaMacroDependencies: Seq[Setting[_]] = Seq(
       // in Scala 2.10, quasiquotes are provided by macro paradise
       case Some((2, 10)) =>
         Seq(
-          compilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
+          compilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.patch),
               "org.scalamacros" %% "quasiquotes" % "2.1.0" cross CrossVersion.binary
         )
     }
@@ -569,4 +571,3 @@ lazy val update2_12 = Seq(
     }
   }
 )
-
