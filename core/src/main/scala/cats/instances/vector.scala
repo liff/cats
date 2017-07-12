@@ -5,6 +5,7 @@ import cats.syntax.show._
 import scala.annotation.tailrec
 import scala.collection.+:
 import scala.collection.immutable.VectorBuilder
+import list._
 
 trait VectorInstances extends cats.kernel.instances.VectorInstances {
   implicit val catsStdInstancesForVector: TraverseFilter[Vector] with MonadCombine[Vector] with CoflatMap[Vector] =
@@ -73,6 +74,9 @@ trait VectorInstances extends cats.kernel.instances.VectorInstances {
 
       override def size[A](fa: Vector[A]): Long = fa.size.toLong
 
+      override def get[A](fa: Vector[A])(idx: Long): Option[A] =
+        if (idx < Int.MaxValue && fa.size > idx && idx >= 0) Some(fa(idx.toInt)) else None
+
       override def traverse[G[_], A, B](fa: Vector[A])(f: A => G[B])(implicit G: Applicative[G]): G[Vector[B]] =
         foldRight[A, G[Vector[B]]](fa, Always(G.pure(Vector.empty))){ (a, lgvb) =>
           G.map2Eval(f(a), lgvb)(_ +: _)
@@ -88,7 +92,7 @@ trait VectorInstances extends cats.kernel.instances.VectorInstances {
       override def collect[A, B](fa: Vector[A])(f: PartialFunction[A, B]): Vector[B] = fa.collect(f)
 
       override def foldM[G[_], A, B](fa: Vector[A], z: B)(f: (B, A) => G[B])(implicit G: Monad[G]): G[B] =
-        Foldable.iteratorFoldM(fa.toIterator, z)(f)
+        Foldable[List].foldM(fa.toList, z)(f)
 
       override def fold[A](fa: Vector[A])(implicit A: Monoid[A]): A = A.combineAll(fa)
 

@@ -2,6 +2,7 @@ package cats
 package instances
 
 import cats.syntax.show._
+
 import scala.annotation.tailrec
 
 trait StreamInstances extends cats.kernel.instances.StreamInstances {
@@ -101,14 +102,34 @@ trait StreamInstances extends cats.kernel.instances.StreamInstances {
       override def forall[A](fa: Stream[A])(p: A => Boolean): Boolean =
         fa.forall(p)
 
+      override def get[A](fa: Stream[A])(idx: Long): Option[A] = {
+        @tailrec
+        def go(idx: Long, s: Stream[A]): Option[A] =
+          s match {
+            case h #:: tail =>
+              if (idx == 0L) Some(h) else go(idx - 1L, tail)
+            case _ => None
+          }
+        if (idx < 0L) None else go(idx, fa)
+      }
+
       override def isEmpty[A](fa: Stream[A]): Boolean = fa.isEmpty
 
       override def filter[A](fa: Stream[A])(f: A => Boolean): Stream[A] = fa.filter(f)
 
       override def collect[A, B](fa: Stream[A])(f: PartialFunction[A, B]): Stream[B] = fa.collect(f)
 
-      override def foldM[G[_], A, B](fa: Stream[A], z: B)(f: (B, A) => G[B])(implicit G: Monad[G]): G[B] =
-        Foldable.iteratorFoldM(fa.toIterator, z)(f)
+      override def foldM[G[_], A, B](fa: Stream[A], z: B)(f: (B, A) => G[B])(implicit G: Monad[G]): G[B] = {
+        def step(in: (Stream[A], B)): G[Either[(Stream[A], B), B]] = {
+          val (s, b)  = in
+          if (s.isEmpty)
+            G.pure(Right(b))
+          else
+            G.map(f(b, s.head)) { bnext => Left((s.tail, bnext)) }
+        }
+
+        G.tailRecM((fa, z))(step)
+      }
 
       override def fold[A](fa: Stream[A])(implicit A: Monoid[A]): A = A.combineAll(fa)
 

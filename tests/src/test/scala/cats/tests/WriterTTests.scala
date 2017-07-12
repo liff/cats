@@ -16,7 +16,7 @@ class WriterTTests extends CatsSuite {
   // Scalacheck to calm down a bit so we don't hit memory and test duration
   // issues.
   implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
-    PropertyCheckConfiguration(minSuccessful = 20, sizeRange = 5)
+    checkConfiguration.copy(sizeRange = 5)
 
   checkAll("WriterT[List, Int, Int]", OrderLaws[WriterT[List, Int, Int]].eqv)
   checkAll("Eq[WriterT[List, Int, Int]]", SerializableTests.serializable(Eq[WriterT[List, Int, Int]]))
@@ -144,7 +144,7 @@ class WriterTTests extends CatsSuite {
   // resolution and the laws of these various instances.
   {
     // F has an Apply and L has a Semigroup
-    implicit val F: Apply[ListWrapper] = ListWrapper.monadCombine
+    implicit val F: Apply[ListWrapper] = ListWrapper.applyInstance
     implicit val L: Semigroup[ListWrapper[Int]] = ListWrapper.semigroup[Int]
 
     Functor[WriterT[ListWrapper, ListWrapper[Int], ?]]
@@ -166,7 +166,7 @@ class WriterTTests extends CatsSuite {
 
   {
     // F has a Monad and L has a Semigroup
-    implicit val F: Monad[ListWrapper] = ListWrapper.monadCombine
+    implicit val F: Monad[ListWrapper] = ListWrapper.monad
     implicit val L: Semigroup[ListWrapper[Int]] = ListWrapper.semigroup[Int]
 
     Functor[WriterT[ListWrapper, ListWrapper[Int], ?]]
@@ -192,7 +192,7 @@ class WriterTTests extends CatsSuite {
   }
   {
     // F has a FlatMap and L has a Monoid
-    implicit val F: FlatMap[ListWrapper] = ListWrapper.monadCombine
+    implicit val F: FlatMap[ListWrapper] = ListWrapper.flatMap
     implicit val L: Monoid[ListWrapper[Int]] = ListWrapper.monoid[Int]
 
     Functor[WriterT[ListWrapper, ListWrapper[Int], ?]]
@@ -219,7 +219,7 @@ class WriterTTests extends CatsSuite {
 
   {
     // F has an Applicative and L has a Monoid
-    implicit val F: Applicative[ListWrapper] = ListWrapper.monadCombine
+    implicit val F: Applicative[ListWrapper] = ListWrapper.applicative
     implicit val L: Monoid[ListWrapper[Int]] = ListWrapper.monoid[Int]
 
     Functor[WriterT[ListWrapper, ListWrapper[Int], ?]]
@@ -246,7 +246,7 @@ class WriterTTests extends CatsSuite {
 
   {
     // F has a Monad and L has a Monoid
-    implicit val F: Monad[ListWrapper] = ListWrapper.monadCombine
+    implicit val F: Monad[ListWrapper] = ListWrapper.monad
     implicit val L: Monoid[ListWrapper[Int]] = ListWrapper.monoid[Int]
 
     Functor[WriterT[ListWrapper, ListWrapper[Int], ?]]
@@ -257,12 +257,16 @@ class WriterTTests extends CatsSuite {
     checkAll("WriterT[ListWrapper, ListWrapper[Int], ?]", MonadWriterTests[WriterT[ListWrapper, ListWrapper[Int], ?], ListWrapper[Int]].monadWriter[Int, Int, Int])
     checkAll("MonadWriter[WriterT[ListWrapper, ListWrapper[Int], ?], List[String]]", SerializableTests.serializable(MonadWriter[WriterT[ListWrapper, ListWrapper[Int], ?], ListWrapper[Int]]))
 
+    checkAll("WriterT[ListWrapper, ListWrapper[Int], ?]]", MonadTransTests[WriterT[?[_], ListWrapper[Int], ?]].monadTrans[ListWrapper, Int, Int])
+    checkAll("MonadTrans[WriterT[?[_], ListWrapper[Int], ?]]", SerializableTests.serializable(MonadTrans[WriterT[?[_], ListWrapper[Int], ?]]))
+
     Functor[WriterT[Id, ListWrapper[Int], ?]]
     Apply[WriterT[Id, ListWrapper[Int], ?]]
     Applicative[WriterT[Id, ListWrapper[Int], ?]]
     FlatMap[WriterT[Id, ListWrapper[Int], ?]]
     CoflatMap[WriterT[Id, ListWrapper[Int], ?]]
     Monad[WriterT[Id, ListWrapper[Int], ?]]
+    MonadTrans[WriterT[?[_], ListWrapper[Int], ?]]
 
     Functor[Writer[ListWrapper[Int], ?]]
     Apply[Writer[ListWrapper[Int], ?]]

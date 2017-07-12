@@ -58,6 +58,9 @@ class OptionTTests extends CatsSuite {
     checkAll("OptionT[ListWrapper, Int]", MonoidKTests[OptionT[ListWrapper, ?]].monoidK[Int])
     checkAll("MonoidK[OptionT[ListWrapper, ?]]", SerializableTests.serializable(MonoidK[OptionT[ListWrapper, ?]]))
 
+    checkAll("OptionT[ListWrapper, Int]]", MonadTransTests[OptionT].monadTrans[ListWrapper, Int, Int])
+    checkAll("MonadTrans[OptionT]", SerializableTests.serializable(MonadTrans[OptionT]))
+
     FlatMap[OptionT[ListWrapper, ?]]
     Applicative[OptionT[ListWrapper, ?]]
     Apply[OptionT[ListWrapper, ?]]
@@ -307,6 +310,8 @@ class OptionTTests extends CatsSuite {
     implicit val T = ListWrapper.traverse
     implicit val M = ListWrapper.monad
     Functor[OptionT[ListWrapper, ?]]
+
+    MonadTrans[OptionT]
   }
 
 }

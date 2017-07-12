@@ -4,6 +4,7 @@ package object data {
   type NonEmptyStream[A] = OneAnd[Stream, A]
   type ValidatedNel[+E, +A] = Validated[NonEmptyList[E], A]
   type IorNel[+B, +A] = Ior[NonEmptyList[B], A]
+  type EitherNel[+E, +A] = Either[NonEmptyList[E], A]
 
   def NonEmptyStream[A](head: A, tail: Stream[A] = Stream.empty): NonEmptyStream[A] =
     OneAnd(head, tail)
@@ -30,4 +31,13 @@ package object data {
 
   type State[S, A] = StateT[Eval, S, A]
   object State extends StateFunctions
+
+  type RWST[F[_], E, S, L, A] = ReaderWriterStateT[F, E, S, L, A]
+  val RWST = ReaderWriterStateT
+
+  type ReaderWriterState[E, S, L, A] = ReaderWriterStateT[Eval, E, S, L, A]
+  object ReaderWriterState extends RWSFunctions
+
+  type RWS[E, S, L, A] = ReaderWriterState[E, S, L, A]
+  val RWS = ReaderWriterState
 }

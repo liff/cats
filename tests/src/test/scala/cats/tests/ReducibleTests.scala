@@ -23,6 +23,15 @@ class ReducibleTestsAdditional extends CatsSuite {
       if (a === goal) Now(true) else lb
     }
 
+  test("Reducible[NonEmptyList] default get/size implementation") {
+    val R = new NonEmptyReducible[NonEmptyList, List] {
+      def split[A](nel: NonEmptyList[A]): (A, List[A]) = (nel.head, nel.tail)
+    }
+    val nel = NonEmptyList.of(1, 2, 3)
+    R.get(nel)(1L) should === (nel.get(1L))
+    R.size(nel) should === (nel.size.toLong)
+    R.get(nel)(4L) should === (None)
+  }
 
   test("Reducible[NonEmptyList]") {
     val R = Reducible[NonEmptyList]
@@ -81,9 +90,9 @@ abstract class ReducibleCheck[F[_]: Reducible](name: String)(implicit ArbFInt: A
     }
   }
 
-  test(s"Reducible[$name].intercalate1") {
+  test(s"Reducible[$name].nonEmptyIntercalate") {
     forAll { (fa: F[String], a: String) =>
-      fa.intercalate1(a) === (fa.toList.mkString(a))
+      fa.nonEmptyIntercalate(a) === (fa.toList.mkString(a))
     }
   }
 }

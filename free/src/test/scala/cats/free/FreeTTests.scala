@@ -47,7 +47,12 @@ class FreeTTests extends CatsSuite {
   {
     import StateT._
     checkAll("FreeT[State[Int, ?], State[Int, ?], Int]", MonadStateTests[FreeTState, Int].monadState[Int, Int, Int])
-    checkAll("MonadState[FreeT[State[Int, ?],State[Int, ?], ?], Int]", SerializableTests.serializable(MonadState[FreeTState, Int]))
+    checkAll("MonadState[FreeT[State[Int, ?], State[Int, ?], ?], Int]", SerializableTests.serializable(MonadState[FreeTState, Int]))
+  }
+
+  {
+    checkAll("FreeT[Option, Option, Int]]", MonadTransTests[FreeT[Option, ?[_], ?]].monadTrans[Option, Int, Int])
+    checkAll("MonadTrans[FreeT[Option, ?[_], Int, ?]]", SerializableTests.serializable(MonadTrans[FreeT[Option, ?[_], ?]]))
   }
 
   test("FlatMap stack safety tested with 50k flatMaps") {
@@ -94,11 +99,6 @@ class FreeTTests extends CatsSuite {
       (fu, i) => fu.flatMap(u => Applicative[FreeTOption].pure(u))
     )
     val b = a.hoist(FunctionK.id)
-  }
-
-  test("transLift for FreeT requires only Functor") {
-    implicit val transLiftInstance = FreeT.catsFreeTransLiftForFreeT[JustFunctor]
-    val d: FreeT[JustFunctor, JustFunctor, Int] = transLiftInstance.liftT[JustFunctor, Int](JustFunctor(1))
   }
 
   test("compile to universal id equivalent to original instance") {

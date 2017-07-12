@@ -9,6 +9,10 @@ import cats.laws.discipline.arbitrary._
 import org.scalacheck.Arbitrary
 
 class StateTTests extends CatsSuite {
+
+  implicit override val generatorDrivenConfig: PropertyCheckConfiguration =
+    checkConfiguration.copy(sizeRange = 5)
+
   import StateTTests._
 
   test("basic state usage"){
@@ -16,9 +20,9 @@ class StateTTests extends CatsSuite {
   }
 
   test("traversing state is stack-safe"){
-    val ns = (0 to 100000).toList
+    val ns = (0 to 70000).toList
     val x = ns.traverse(_ => add1)
-    x.runS(0).value should === (100001)
+    x.runS(0).value should === (70001)
   }
 
   test("State.pure and StateT.pure are consistent"){
@@ -199,7 +203,7 @@ class StateTTests extends CatsSuite {
 
   {
     // F has a Functor
-    implicit val F: Functor[ListWrapper] = ListWrapper.monad
+    implicit val F: Functor[ListWrapper] = ListWrapper.functor
     // We only need a Functor on F to find a Functor on StateT
     Functor[StateT[ListWrapper, Int, ?]]
   }
@@ -235,18 +239,22 @@ class StateTTests extends CatsSuite {
 
     checkAll("StateT[ListWrapper, Int, Int]", MonadTests[StateT[ListWrapper, Int, ?]].monad[Int, Int, Int])
     checkAll("Monad[StateT[ListWrapper, Int, ?]]", SerializableTests.serializable(Monad[StateT[ListWrapper, Int, ?]]))
+    checkAll("StateT[ListWrapper, Int, Int]", MonadTransTests[StateT[?[_], String, ?]].monadTrans[ListWrapper, Int, Int])
+    checkAll("MonadTrans[StateT[?[_], Int, ?]]", SerializableTests.serializable(MonadTrans[StateT[?[_], Int, ?]]))
 
     Monad[StateT[ListWrapper, Int, ?]]
     FlatMap[StateT[ListWrapper, Int, ?]]
     Applicative[StateT[ListWrapper, Int, ?]]
     Apply[StateT[ListWrapper, Int, ?]]
     Functor[StateT[ListWrapper, Int, ?]]
+
+    MonadTrans[StateT[?[_], Int, ?]]
   }
 
   {
     // F has a Monad and a SemigroupK
-    implicit def F = ListWrapper.monad
-    implicit def S = ListWrapper.semigroupK
+    implicit val F = ListWrapper.monad
+    implicit val S = ListWrapper.semigroupK
 
     checkAll("StateT[ListWrapper, Int, Int]", SemigroupKTests[StateT[ListWrapper, Int, ?]].semigroupK[Int])
     checkAll("SemigroupK[StateT[ListWrapper, Int, ?]]", SerializableTests.serializable(SemigroupK[StateT[ListWrapper, Int, ?]]))
@@ -254,7 +262,7 @@ class StateTTests extends CatsSuite {
 
   {
     // F has a MonadCombine
-    implicit def F = ListWrapper.monadCombine
+    implicit val F = ListWrapper.monadCombine
 
     checkAll("StateT[ListWrapper, Int, Int]", MonadCombineTests[StateT[ListWrapper, Int, ?]].monadCombine[Int, Int, Int])
     checkAll("MonadCombine[StateT[ListWrapper, Int, ?]]", SerializableTests.serializable(MonadCombine[StateT[ListWrapper, Int, ?]]))

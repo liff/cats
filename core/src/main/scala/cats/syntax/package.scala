@@ -36,13 +36,13 @@ package object syntax {
   object reducible extends ReducibleSyntax
   object semigroup extends SemigroupSyntax
   object semigroupk extends SemigroupKSyntax
-  object show extends Show.ToShowOps
+  object show extends ShowSyntax
   object split extends SplitSyntax
   object strong extends StrongSyntax
-  object transLift extends TransLiftSyntax
+  object monadTrans extends MonadTransSyntax
   object traverse extends TraverseSyntax
+  object nonEmptyTraverse extends NonEmptyTraverseSyntax
   object traverseFilter extends TraverseFilterSyntax
-  object tuple extends TupleSyntax
   object validated extends ValidatedSyntax
   object vector extends VectorSyntax
   object writer extends WriterSyntax

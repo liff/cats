@@ -24,10 +24,11 @@ trait AllSyntax
     with InvariantSyntax
     with IorSyntax
     with ListSyntax
-    with MonadSyntax
     with MonadCombineSyntax
     with MonadErrorSyntax
     with MonadFilterSyntax
+    with MonadSyntax
+    with MonadTransSyntax
     with MonoidSyntax
     with OptionSyntax
     with OrderSyntax
@@ -39,10 +40,9 @@ trait AllSyntax
     with ShowSyntax
     with SplitSyntax
     with StrongSyntax
-    with TransLiftSyntax
     with TraverseFilterSyntax
     with TraverseSyntax
-    with TupleSyntax
+    with NonEmptyTraverseSyntax
     with ValidatedSyntax
     with VectorSyntax
     with WriterSyntax

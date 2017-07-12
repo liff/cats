@@ -189,9 +189,9 @@ final class NonEmptyVector[+A] private (val toVector: Vector[A]) extends AnyVal 
 private[data] sealed trait NonEmptyVectorInstances {
 
   implicit val catsDataInstancesForNonEmptyVector: SemigroupK[NonEmptyVector] with Reducible[NonEmptyVector]
-    with Comonad[NonEmptyVector] with Traverse[NonEmptyVector] with Monad[NonEmptyVector] =
+    with Comonad[NonEmptyVector] with NonEmptyTraverse[NonEmptyVector] with Monad[NonEmptyVector] =
     new NonEmptyReducible[NonEmptyVector, Vector] with SemigroupK[NonEmptyVector] with Comonad[NonEmptyVector]
-      with Traverse[NonEmptyVector] with Monad[NonEmptyVector] {
+      with Monad[NonEmptyVector] with NonEmptyTraverse[NonEmptyVector] {
 
       def combineK[A](a: NonEmptyVector[A], b: NonEmptyVector[A]): NonEmptyVector[A] =
         a concatNev b
@@ -210,7 +210,7 @@ private[data] sealed trait NonEmptyVectorInstances {
         fa map f
 
       def pure[A](x: A): NonEmptyVector[A] =
-        NonEmptyVector(x, Vector.empty)
+        NonEmptyVector.one(x)
 
       def flatMap[A, B](fa: NonEmptyVector[A])(f: A => NonEmptyVector[B]): NonEmptyVector[B] =
         fa flatMap f
@@ -226,7 +226,15 @@ private[data] sealed trait NonEmptyVectorInstances {
 
       def extract[A](fa: NonEmptyVector[A]): A = fa.head
 
-      def traverse[G[_], A, B](fa: NonEmptyVector[A])(f: (A) => G[B])(implicit G: Applicative[G]): G[NonEmptyVector[B]] =
+      def nonEmptyTraverse[G[_], A, B](nel: NonEmptyVector[A])(f: A => G[B])(implicit G: Apply[G]): G[NonEmptyVector[B]] =
+        Foldable[Vector].reduceRightToOption[A, G[Vector[B]]](nel.tail)(a => G.map(f(a))(_ +: Vector.empty)) { (a, lglb) =>
+          G.map2Eval(f(a), lglb)(_ +: _)
+        }.map {
+          case None => G.map(f(nel.head))(NonEmptyVector(_, Vector.empty))
+          case Some(gtail) => G.map2(f(nel.head), gtail)(NonEmptyVector(_, _))
+        }.value
+
+      override def traverse[G[_], A, B](fa: NonEmptyVector[A])(f: (A) => G[B])(implicit G: Applicative[G]): G[NonEmptyVector[B]] =
         G.map2Eval(f(fa.head), Always(Traverse[Vector].traverse(fa.tail)(f)))(NonEmptyVector(_, _)).value
 
       override def foldLeft[A, B](fa: NonEmptyVector[A], b: B)(f: (B, A) => B): B =
@@ -234,6 +242,9 @@ private[data] sealed trait NonEmptyVectorInstances {
 
       override def foldRight[A, B](fa: NonEmptyVector[A], lb: Eval[B])(f: (A, Eval[B]) => Eval[B]): Eval[B] =
         fa.foldRight(lb)(f)
+
+      override def get[A](fa: NonEmptyVector[A])(idx: Long): Option[A] =
+        if (idx < Int.MaxValue) fa.get(idx.toInt) else None
 
       def tailRecM[A, B](a: A)(f: A => NonEmptyVector[Either[A, B]]): NonEmptyVector[B] = {
         val buf = new VectorBuilder[B]
@@ -252,9 +263,6 @@ private[data] sealed trait NonEmptyVectorInstances {
 
       override def fold[A](fa: NonEmptyVector[A])(implicit A: Monoid[A]): A =
         fa.reduce
-
-      override def foldM[G[_], A, B](fa: NonEmptyVector[A], z: B)(f: (B, A) => G[B])(implicit G: Monad[G]): G[B] =
-        Foldable.iteratorFoldM(fa.toVector.toIterator, z)(f)
 
       override def find[A](fa: NonEmptyVector[A])(f: A => Boolean): Option[A] =
         fa.find(f)
@@ -295,6 +303,8 @@ object NonEmptyVector extends NonEmptyVectorInstances {
     tail.foreach(buf += _)
     new NonEmptyVector(buf.result)
   }
+
+  def one[A](head: A): NonEmptyVector[A] = apply(head, Vector.empty[A])
 
   def unapply[A](nev: NonEmptyVector[A]): Some[(A, Vector[A])] = Some((nev.head, nev.tail))
 

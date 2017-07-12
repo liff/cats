@@ -4,25 +4,38 @@ import cats.arrow.FunctionK
 import cats.data.EitherK
 
 /**
- * The injection type class as described in "Data types a la carte"
- * (Swierstra 2008).
- *
- * @see [[http://www.staff.science.uu.nl/~swier004/publications/2008-jfp.pdf]]
- */
-sealed abstract class InjectK[F[_], G[_]] {
+  * InjectK is a type class providing an injection from type
+  * constructor `F` into type constructor `G`. An injection is a
+  * functor transformation `inj` which does not destroy any
+  * information: for every `ga: G[A]` there is at most one `fa: F[A]`
+  * such that `inj(fa) = ga`.
+  *
+  * Because of this all injections admit partial inverses `prj` which
+  * pair a value `ga: G[A]` back with a single value `fa: F[A]`.
+  *
+  * The behavior of the default instances for the InjectK type class
+  * are described thoroughly in "Data types a la carte" (Swierstra
+  * 2008).
+  *
+  * @note Prior to cats 1.0, InjectK was known as [[Inject]].
+  *
+  * @see [[http://www.staff.science.uu.nl/~swier004/publications/2008-jfp.pdf]]
+  * @see [[Inject]] for injection for `Either`
+  */
+abstract class InjectK[F[_], G[_]] {
   def inj: FunctionK[F, G]
 
   def prj: FunctionK[G, λ[α => Option[F[α]]]]
 
-  def apply[A](fa: F[A]): G[A] = inj(fa)
+  final def apply[A](fa: F[A]): G[A] = inj(fa)
 
-  def unapply[A](ga: G[A]): Option[F[A]] = prj(ga)
+  final def unapply[A](ga: G[A]): Option[F[A]] = prj(ga)
 }
 
 private[cats] sealed abstract class InjectKInstances {
   implicit def catsReflexiveInjectKInstance[F[_]]: InjectK[F, F] =
     new InjectK[F, F] {
-      val inj = λ[FunctionK[F, F]](identity(_))
+      val inj = FunctionK.id[F]
 
       val prj = λ[FunctionK[F, λ[α => Option[F[α]]]]](Some(_))
     }
