@@ -4,9 +4,9 @@ package free
 import cats.arrow.FunctionK
 
 /**
- * The dual view of the Yoneda lemma. Also a free functor on `F`.
+ * The dual view of the Yoneda lemma. The free functor on `F`.
  * This is isomorphic to `F` as long as `F` itself is a functor.
- * The homomorphism from `F[A]` to `Coyoneda[F,A]` exists even when
+ * The function from `F[A]` to `Coyoneda[F,A]` exists even when
  * `F` is not a functor.
  * Implemented using a List of functions for stack-safety.
  */
@@ -29,6 +29,10 @@ sealed abstract class Coyoneda[F[_], A] extends Serializable { self =>
   /** Converts to `F[A]` given that `F` is a functor */
   final def run(implicit F: Functor[F]): F[A] = F.map(fi)(k)
 
+  /** Converts to `G[A]` given that `G` is a functor */
+  final def foldMap[G[_]](trans: F ~> G)(implicit G: Functor[G]): G[A] =
+    G.map(trans(fi))(k)
+
   /** Converts to `Yoneda[F,A]` given that `F` is a functor */
   final def toYoneda(implicit F: Functor[F]): Yoneda[F, A] =
     new Yoneda[F, A] {
@@ -42,8 +46,15 @@ sealed abstract class Coyoneda[F[_], A] extends Serializable { self =>
   final def map[B](f: A => B): Aux[F, B, Pivot] =
     unsafeApply(fi)(f.asInstanceOf[Any => Any] :: ks)
 
-  final def transform[G[_]](f: FunctionK[F, G]): Aux[G, A, Pivot] =
+  /**
+    * Modify the context `F` using transformation `f`.
+    */
+  final def mapK[G[_]](f: F ~> G): Aux[G, A, Pivot] =
     unsafeApply(f(fi))(ks)
+
+  @deprecated("Use mapK", "1.0.0")
+  final def transform[G[_]](f: FunctionK[F, G]): Aux[G, A, Pivot] =
+    mapK(f)
 
 }
 
@@ -78,4 +89,5 @@ object Coyoneda {
     new Functor[Coyoneda[F, ?]] {
       def map[A, B](cfa: Coyoneda[F, A])(f: A => B): Coyoneda[F, B] = cfa map f
     }
+
 }

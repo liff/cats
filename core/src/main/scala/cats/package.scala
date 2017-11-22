@@ -32,8 +32,8 @@ package object cats {
  * encodes pure unary function application.
  */
   type Id[A] = A
-  implicit val catsInstancesForId: Bimonad[Id] with Monad[Id] with NonEmptyTraverse[Id] =
-    new Bimonad[Id] with Monad[Id] with NonEmptyTraverse[Id] {
+  implicit val catsInstancesForId: Bimonad[Id] with CommutativeMonad[Id] with Comonad[Id] with NonEmptyTraverse[Id] =
+    new Bimonad[Id] with CommutativeMonad[Id] with Comonad[Id] with NonEmptyTraverse[Id] {
       def pure[A](a: A): A = a
       def extract[A](a: A): A = a
       def flatMap[A, B](a: A)(f: A => B): B = f(a)
@@ -75,9 +75,12 @@ package object cats {
       override def isEmpty[A](fa: Id[A]): Boolean = false
   }
 
+  implicit val catsParallelForId: Parallel[Id, Id] = Parallel.identity
+
   type Eq[A] = cats.kernel.Eq[A]
   type PartialOrder[A] = cats.kernel.PartialOrder[A]
   type Order[A] = cats.kernel.Order[A]
+  type Hash[A] = cats.kernel.Hash[A]
   type Semigroup[A] = cats.kernel.Semigroup[A]
   type Monoid[A] = cats.kernel.Monoid[A]
   type Group[A] = cats.kernel.Group[A]
@@ -85,7 +88,11 @@ package object cats {
   val Eq = cats.kernel.Eq
   val PartialOrder = cats.kernel.PartialOrder
   val Order = cats.kernel.Order
+  val Hash = cats.kernel.Hash
   val Semigroup = cats.kernel.Semigroup
   val Monoid = cats.kernel.Monoid
   val Group = cats.kernel.Group
+
+  @deprecated("renamed to Semigroupal", "1.0.0-RC1")
+  type Cartesian[F[_]] = Semigroupal[F]
 }

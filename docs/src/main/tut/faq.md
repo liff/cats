@@ -2,14 +2,14 @@
 layout: page
 title:  "FAQ"
 section: "faq"
-position: 4
+position: 40
 ---
 
 # Frequently Asked Questions
 
 ## Questions
-
  * [What imports do I need?](#what-imports)
+ * [What is the difference between Cats and Scalaz?](#diff-scalaz) 
  * [Where is right-biased `Either`?](#either)
  * [Why is the compiler having trouble with types with more than one type parameter?](#si-2712)
  * [Why can't the compiler find implicit instances for Future?](#future-instances)
@@ -22,6 +22,7 @@ position: 4
  * [What does `macro Ops` do? What is `cats.macros.Ops`?](#machinist)
  * [What is `tailRecM`?](#tailrecm)
  * [What does this symbol mean?](#symbol)
+ * [How can I test instances against their type classes' laws?](#law-testing)
  * [How can I help?](#contributing)
 
 ## <a id="what-imports" href="#what-imports"></a>What imports do I need?
@@ -35,6 +36,13 @@ import cats.implicits._
 ```
 
 This should be all that you need, but if you'd like to learn more about the details of imports than you can check out the [import guide](typeclasses/imports.html).
+
+## <a id="diff-scalaz" href="#diff-scalaz"></a>What is the difference between Cats and Scalaz? 
+
+Cats and [Scalaz](https://github.com/scalaz/scalaz) have the same goal: to facilitate pure functional programming in Scala applications. However the underlying core strategy is different; Scalaz took the approach of trying to provide a single batteries-included *standard library* for FP that powers the Scala applications. Cats, on the other hand, aims to help build an [ecosystem](/cats/#ecosystem) of pure FP libraries by providing a solid and stable foundation; these libraries can have their own styles and personalities, competing with each other, while at the same time playing nice. It is through this ecosystem of FP libraries (cats included) that Scala applications can be powered with "FP awesome-ness" and beyond by picking whatever best fit their needs.
+
+Based on this core strategy, Cats takes a [modular](/cats/motivations#modularity) approach and focuses on providing core, [binary compatible](/cats/#binary-compatibility-and-versioning), [approachable](/cats/motivations#approachability) and [efficient](/cats/motivations#efficiency) abstractions. It provides a welcoming and supportive environment for the [user community](https://gitter.im/typelevel/cats) governed by the [typelevel code of conduct](https://typelevel.org/conduct). It also takes great effort in supplying a comprehensive and beginner-friendly [documentation](/cats/#documentation).
+                       
 
 ## <a id="either" href="#either"></a>Where is right-biased Either?
 Up through Cats 0.7.x we had `cats.data.Xor`, which was effectively `scala.util.Either`, but right-biased by default and with
@@ -103,6 +111,7 @@ We can even perform more complicated operations, such as a `traverse` of the nes
 import cats.data.ValidatedNel
 type ErrorsOr[A] = ValidatedNel[String, A]
 def even(i: Int): ErrorsOr[Int] = if (i % 2 == 0) i.validNel else s"$i is odd".invalidNel
+```
 
 ```tut:book
 nl.traverse(even)
@@ -203,13 +212,11 @@ All other symbols can be imported with `import cats.implicits._`
 
 | Symbol                           | Name                   | Nickname         | Type Class              | Signature                                                 |
 | -------------------------------- | ---------------------- | ---------------- | ----------------------- | --------------------------------------------------------- |
-| `fa *> fb`                       | right apply            |                  | `Cartesian[F[_]]`       | `*>(fa: F[A])(fb: F[B]): F[A]`                            |
-| `fa <* fb`                       | left apply             |                  | `Cartesian[F[_]]`       | `<*(fa: F[A])(fb: F[B]): F[B]`                            |
+| `fa *> fb`                       | followed by            |                  | `Apply[F[_]]`           | `followedBy(fa: F[A])(fb: F[B]): F[B]`                    |
+| `fa <* fb`                       | for effect             |                  | `Apply[F[_]]`           | `forEffect(fa: F[A])(fb: F[B]): F[A]`                     |
 | `x === y`                        | equals                 |                  | `Eq[A]`                 | `eqv(x: A, y: A): Boolean`                                |
 | `x =!= y`                        | not equals             |                  | `Eq[A]`                 | `neqv(x: A, y: A): Boolean`                               |
 | `fa >>= f`                       | flatMap                |                  | `FlatMap[F[_]]`         | `flatMap(fa: F[A])(f: A => F[B]): F[B]`                   |
-| `fa >> fb`                       | followed by            |                  | `FlatMap[F[_]]`         | `followedBy(fa: F[A])(fb: F[B]): F[B]`                    |
-| `fa << fb`                       | for effect             |                  | `FlatMap[F[_]]`         | `forEffect(fa: F[A])(fb: F[B]): F[A]`                     |
 | <code>x &#124;-&#124; y</code>   | remove                 |                  | `Group[A]`              | `remove(x: A, y: A): A`                                   |
 | `x > y`                          | greater than           |                  | `PartialOrder[A]`       | `gt(x: A, y: A): Boolean`                                 |
 | `x >= y`                         | greater than or equal  |                  | `PartialOrder[A]`       | `gteq(x: A, y: A): Boolean`                               |
@@ -224,6 +231,12 @@ All other symbols can be imported with `import cats.implicits._`
 | `F :≺: G`                        | injectK                |                  | `InjectK[F[_], G[_]]`   | `InjectK` alias                                           |
 | `⊥`                              | bottom                 |                  | N/A                     | `Nothing`                                                 |
 | `⊤`                              | top                    |                  | N/A                     | `Any`                                                     |
+| `fa >> fb` (Deprecated)          | followed by            |                  | `FlatMap[F[_]]`         | `followedBy(fa: F[A])(fb: F[B]): F[B]`                    |
+| `fa << fb` (Deprecated)          | for effect             |                  | `FlatMap[F[_]]`         | `forEffect(fa: F[A])(fb: F[B]): F[A]`                     |
+
+## <a id="law-testing" href="#law-testing"></a>How can I test instances against their type classes' laws?
+
+You can find more information [here](typeclasses/lawtesting.html).
 
 ## <a id="contributing" href="#contributing"></a>How can I help?
 
